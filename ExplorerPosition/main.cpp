@@ -57,6 +57,15 @@ bool iequals(const std::string& a, const std::string& b)
 	});
 }
 
+bool iequals(const std::wstring& a, const std::wstring& b)
+{
+	return std::equal(a.begin(), a.end(),
+		b.begin(), b.end(),
+		[](wchar_t a, wchar_t b) {
+		return towlower(a) == towlower(b);
+	});
+}
+
 bool pointWithinRect(POINT point, RECT rect)
 {
 	return point.x >= rect.left &&
@@ -252,8 +261,53 @@ void WinEventProc(
 	dprintf("\n");
 }
 
+bool IsDuplicateProcessRunning(const std::string processName, DWORD pid)
+{
+	bool exists = false;
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+	PROCESSENTRY32 entry;
+	entry.dwSize = sizeof(PROCESSENTRY32);
+
+	if (Process32First(snapshot, &entry))
+	{
+		while (Process32Next(snapshot, &entry))
+		{
+// 			dprintf("Process : %s (pid %d)\n", entry.szExeFile, entry.th32ProcessID);
+			if (iequals(entry.szExeFile, processName) && entry.th32ProcessID != pid)
+			{
+				exists = true;
+				break;
+			}
+		}
+	}
+
+	CloseHandle(snapshot);
+	return exists;
+}
+
+bool checkHasDuplicateProcess()
+{
+	char currentProcessNameFull[MAX_PATH];
+	GetModuleFileName(nullptr, currentProcessNameFull, MAX_PATH);
+
+	const char *last = strrchr(currentProcessNameFull, '\\');
+	std::string currentProcessName(last != NULL ? last + 1 : currentProcessNameFull);
+
+// 	dprintf("This exe:  %s (pid %d)\n", currentProcessName.c_str(), GetCurrentProcessId());
+	return IsDuplicateProcessRunning(currentProcessName, GetCurrentProcessId());
+}
+
 int __stdcall wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR cmdArgs, int windowShowCmd)
 {
+	// Prevent duplicate instances of this software
+	if (checkHasDuplicateProcess())
+	{
+		MessageBoxA(nullptr, "This program is already running.\n\nExisting process can be closed from Task Manager (open by pressing Ctrl+Shift+Esc).", "Duplicate process", MB_OK | MB_ICONERROR);
+		return 0;
+	}
+
 	HWINEVENTHOOK hook = SetWinEventHook(
 		EVENT_OBJECT_SHOW,
 		EVENT_OBJECT_SHOW,

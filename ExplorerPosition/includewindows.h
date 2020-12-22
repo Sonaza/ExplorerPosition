@@ -8,3 +8,5 @@
 
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
+
+#include <tlhelp32.h>
