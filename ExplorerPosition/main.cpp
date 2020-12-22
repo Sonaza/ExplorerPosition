@@ -1,18 +1,13 @@
-
-#include "includewindows.h"
-
-#include "log.h"
-
 #include <vector>
 #include <deque>
-#include <algorithm>
 #include <string>
 #include <cstdio>
-#include <inttypes.h>
+#include <cinttypes>
+
+#include "includewindows.h"
+#include "log.h"
 
 const bool positionUnderCursor = true;
-
-std::string lastProgramErrorString = "";
 
 std::string getLastErrorAsString()
 {
@@ -34,7 +29,7 @@ std::string getLastErrorAsString()
 
 std::string getProcessName(HWND hWnd)
 {
-	TCHAR buffer[MAX_PATH] = { 0 };
+	char buffer[MAX_PATH] = { 0 };
 	DWORD dwProcId = 0;
 
 	GetWindowThreadProcessId(hWnd, &dwProcId);
@@ -47,7 +42,7 @@ std::string getProcessName(HWND hWnd)
 	}
 	else
 	{
-		printf("Failed to handle\n");
+		dprintf("OpenProcess error: %s\n", getLastErrorAsString().c_str());
 	}
 
 	return std::string(buffer);
@@ -65,9 +60,9 @@ bool iequals(const std::string& a, const std::string& b)
 bool pointWithinRect(POINT point, RECT rect)
 {
 	return point.x >= rect.left &&
-		point.x <= rect.right &&
-		point.y >= rect.top &&
-		point.y <= rect.bottom;
+		   point.x <= rect.right &&
+		   point.y >= rect.top &&
+		   point.y <= rect.bottom;
 }
 
 BOOL CALLBACK monitorEnumProc(HMONITOR monitor, HDC dc, LPRECT rekt, LPARAM userdata)
@@ -214,25 +209,26 @@ void WinEventProc(
 	DWORD dwmsEventTime
 )
 {
-	if (idObject != OBJID_WINDOW)
-		return;
-
-	if (idChild != CHILDID_SELF)
-		return;
-
 	if (event != EVENT_OBJECT_SHOW)
 		return;
 
+	if (idObject != OBJID_WINDOW || idChild != CHILDID_SELF)
+		return;
+
+	// Might be unnecessary considering the event type
 	if (!IsWindowVisible(hwnd))
 		return;
 
+	// Require window to be standalone (no parent)
 	if (hwnd != GetAncestor(hwnd, GA_ROOT))
 		return;
 
+	// Check process name, looking for explorer.exe only
 	const std::string currentProcessName = getProcessName(hwnd);
 	if (!iequals(currentProcessName, "explorer.exe"))
 		return;
 
+	// Don't allow empty titles
 	wchar_t titleBuffer[1024] = { 0 };
 	if (GetWindowTextW(hwnd, titleBuffer, 1024) == 0)
 		return;
@@ -259,7 +255,7 @@ void WinEventProc(
 int __stdcall wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR cmdArgs, int windowShowCmd)
 {
 	HWINEVENTHOOK hook = SetWinEventHook(
-		EVENT_OBJECT_CREATE,
+		EVENT_OBJECT_SHOW,
 		EVENT_OBJECT_SHOW,
 		nullptr,
 		&WinEventProc,
