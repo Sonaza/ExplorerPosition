@@ -7,7 +7,19 @@
 #include "includewindows.h"
 #include "log.h"
 
+// Attempt to place window under cursor instead of the same relative coordinates.
 const bool positionUnderCursor = true;
+
+// Margin from the edges of monitor. Only used if 'positionUnderCursor' is also true.
+const int32_t edgeMarginX = 20;
+const int32_t edgeMarginY = 20;
+
+// Margin used if cursor is positioned in taskbar area when an explorer window opens (like in a case where new window is opened by middle clicking)
+const bool useDifferentMarginIfInTaskbarArea = true;
+const int32_t edgeMarginInTaskbarX = 120;
+const int32_t edgeMarginInTaskbarY = 20;
+
+////////////////////////////////////////////////
 
 std::string getLastErrorAsString()
 {
@@ -72,6 +84,11 @@ bool pointWithinRect(POINT point, RECT rect)
 		   point.x <= rect.right &&
 		   point.y >= rect.top &&
 		   point.y <= rect.bottom;
+}
+
+bool cursorInTaskbarArea(POINT cursorPosition, RECT workArea, RECT monitorArea)
+{
+	return pointWithinRect(cursorPosition, monitorArea) && !pointWithinRect(cursorPosition, workArea);
 }
 
 BOOL CALLBACK monitorEnumProc(HMONITOR monitor, HDC dc, LPRECT rekt, LPARAM userdata)
@@ -180,16 +197,20 @@ bool repositionWindow(const HWND handle)
 
 	if (positionUnderCursor)
 	{
+		const bool inTaskbar = useDifferentMarginIfInTaskbarArea && cursorInTaskbarArea(cursorPosition, targetMonitorInfo.rcWork, targetMonitorInfo.rcMonitor);
+		int32_t MarginX = inTaskbar ? edgeMarginInTaskbarX : edgeMarginX;
+		int32_t MarginY = inTaskbar ? edgeMarginInTaskbarY : edgeMarginY;
+
 		left = cursorPosition.x - targetMonitorInfo.rcMonitor.left - width / 2;
 
-		int32_t minLeft = 0;
-		int32_t maxLeft = screenWidth - width;
+		int32_t minLeft = 0 + MarginX;
+		int32_t maxLeft = screenWidth - width - MarginX;
 		left = clamp(left, minLeft, maxLeft);
 
 		top = cursorPosition.y - targetMonitorInfo.rcMonitor.top - height / 3;
 
-		int32_t minTop = 0;
-		int32_t maxTop = screenHeight - height;
+		int32_t minTop = 0 + MarginY;
+		int32_t maxTop = screenHeight - height - MarginY;
 		top = clamp(top, minTop, maxTop);
 	}
 
