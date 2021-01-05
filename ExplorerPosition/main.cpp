@@ -198,19 +198,19 @@ bool repositionWindow(const HWND handle)
 	if (positionUnderCursor)
 	{
 		const bool inTaskbar = useDifferentMarginIfInTaskbarArea && cursorInTaskbarArea(cursorPosition, targetMonitorInfo.rcWork, targetMonitorInfo.rcMonitor);
-		int32_t MarginX = inTaskbar ? edgeMarginInTaskbarX : edgeMarginX;
-		int32_t MarginY = inTaskbar ? edgeMarginInTaskbarY : edgeMarginY;
+		int32_t marginX = inTaskbar ? edgeMarginInTaskbarX : edgeMarginX;
+		int32_t marginY = inTaskbar ? edgeMarginInTaskbarY : edgeMarginY;
 
 		left = cursorPosition.x - targetMonitorInfo.rcMonitor.left - width / 2;
 
-		int32_t minLeft = 0 + MarginX;
-		int32_t maxLeft = screenWidth - width - MarginX;
+		int32_t minLeft = 0 + marginX;
+		int32_t maxLeft = screenWidth - width - marginX;
 		left = clamp(left, minLeft, maxLeft);
 
 		top = cursorPosition.y - targetMonitorInfo.rcMonitor.top - height / 3;
 
-		int32_t minTop = 0 + MarginY;
-		int32_t maxTop = screenHeight - height - MarginY;
+		int32_t minTop = 0 + marginY;
+		int32_t maxTop = screenHeight - height - marginY;
 		top = clamp(top, minTop, maxTop);
 	}
 
